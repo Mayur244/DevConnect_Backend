@@ -2,23 +2,9 @@ const express = require("express");
 const app = express();
 const { connectDB } = require("./config/database");
 const User = require("./models/user");
-// const { connectDB } = require("./config/database");
-// const User = require("./models/user");
 
 // middleware
-// app.use(express.json());
-
-app.post("/signup", async (req, res) => {
-  const user = new User({
-    firstName: "daduuu",
-    lastName: "patil",
-    emailId: "dadu12@gmail.com",
-    password: "dadueyash@123",
-  });
-
-  await user.save();
-  res.send("User saved");
-});
+app.use(express.json());
 
 connectDB()
   .then(() => {
@@ -31,19 +17,36 @@ connectDB()
     console.error("DB not connected");
   });
 
-
-
 // // patch --> updating some fields from the user documents
-// app.patch("/update", async (req,res) => {
-//   const userId = req.body.userId;
-//   const Userdata = req.body;
-//   try {
-//     const user = await User.findByIdAndUpdate(userId, Userdata, { runValidators : true});
-//     res.send("User Updated successfully");
-//   } catch (error) {
-//     res.status(400).send("Something went wrong" + error.message);
-//   }
-// })
+app.patch("/update/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const Userdata = req.body;
+  // //console.log("param:", userId)
+
+  try {
+    const allowedUpdates = [
+      "firstName",
+      "lastName",
+      "age",
+      "password",
+      "userId",
+    ];
+    
+    const isUpdateAllowed = Object.keys(Userdata).every((k) =>
+      allowedUpdates.includes(k)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Updates not allowed");
+    } else {
+      const user = await User.findByIdAndUpdate(userId, Userdata, {
+        runValidators: true,
+      });
+      res.send("User Updated successfully");
+    }
+  } catch (error) {
+    res.status(400).send("Something went wrong, " + error.message);
+  }
+});
 
 // // delete --> deleting a user using UserId
 app.delete("/delete", async (req, res) => {
@@ -54,7 +57,7 @@ app.delete("/delete", async (req, res) => {
   } catch (error) {
     res.status(500).send("Something went wrong");
   }
-})
+});
 
 // get --> gets all users/feed
 app.get("/feed", async (req, res) => {
@@ -94,25 +97,10 @@ app.post("/signup", async (req, res) => {
     res.send("User added successfully");
   } catch (error) {
     // Handle unique email errors
-    if (error.code === 11000) {
-      res.status(400).send("Email is already registered.");
-    } else {
-      res.status(500).send("Failed to add user: " + error.message);
-    }
+    res.status(500).send("Failed to add user: " + error.message);
   }
 });
 
-//connecting to database
-// connectDB()
-//   .then(() => {
-//     app.listen(3000, () => {
-//       console.log("Server is running at port 3000...");
-//     });
-//   })
-//   .catch((err) => {
-//     console.log("DB not connected:", err);
-//   });
-
 app.use("/", (req, res) => {
-  res.send("Server Running");
+  res.send("Go Back");
 });
