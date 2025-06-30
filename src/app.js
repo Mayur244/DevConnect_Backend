@@ -4,11 +4,14 @@ const { connectDB } = require("./config/database");
 const User = require("./models/user");
 const { validate } = require("./utils/validate");
 const bcrypt = require("bcrypt");
-const validator = require("validator")
+const validator = require("validator");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const {userAuth} = require("./middleware/Auth")
 
 // middleware
 app.use(express.json());
-
+app.use(cookieParser());
 
 // // post --> creates a user
 app.post("/signup", async (req, res) => {
@@ -19,7 +22,6 @@ app.post("/signup", async (req, res) => {
     //encrypt the password
     const { firstName, lastName, emailId, password } = req.body;
     const hashPassword = await bcrypt.hash(password, 10);
-    console.log(hashPassword);
 
     //save the data into DB
     const user = new User({
@@ -34,117 +36,55 @@ app.post("/signup", async (req, res) => {
     // Handle unique email errors
     res.status(400).send("ERROR : " + error.message);
   }
-});  
+});
 
 // post --> login the valid user
 app.post("/login", async (req, res) => {
   try {
-    const {emailId, password} = req.body;
+    const { emailId, password } = req.body;
 
     //validate the email id and password
-    if(!validator.isEmail(emailId)){
+    if (!validator.isEmail(emailId)) {
       throw new Error("Enter valid Email id");
-    }
-    else if(!validator.isStrongPassword(password)){
+    } else if (!validator.isStrongPassword(password)) {
       throw new Error("Enter strong password");
-      
     }
 
     // check user present or not
-    const user = await User.findOne({emailId : emailId});
-    if(!user){
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
       throw new Error("Invalid Credentials");
     }
+    
+    //validate the password 
+    const isPasswordValid = await user.validatePassword(password);
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if(isPasswordValid){
+    // generate and send cookie/token from server to the browser
+    if (isPasswordValid) {
+      const token = await user.getJWT();
+      res.cookie("token", token);
       res.send("Logged In Successfully");
-    }else{
+    } else {
       throw new Error("Invalid Credentials");
-      
     }
-
   } catch (error) {
     res.status(400).send("ERROR : " + error.message);
   }
-})
-
-// get --> gets all users/feed
-app.get("/feed", async (req, res) => {
-  try {
-    const user = await User.find({});
-    if (user) {
-      res.send(user);
-    } else {
-      res.send("User not found");
-    }
-  } catch (error) {
-    res.status(400).send("Something went wrong");
-  }
 });
 
-// get --> gets a single user
-app.get("/user", async (req, res) => {
-  const userLastName = req.body.lastName;
+//get --> profile
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    const user = await User.findOne({ lastName: userLastName });
-    if (user) {
-      res.send(user);
-    } else {
-      res.status(400).send("User not found");
-    }
+    const user = req.user;
+    res.send(user);
   } catch (error) {
-    res.status(500).send("Something went wrong");
-  }
-});
-
-// // patch --> updating some fields from the user documents
-app.patch("/update/:userId", async (req, res) => {
-  const userId = req.params.userId;
-  const Userdata = req.body;
-  // //console.log("param:", userId)
-
-  try {
-    const allowedUpdates = [
-      "firstName",
-      "lastName",
-      "age",
-      "password",
-      "userId",
-    ];
-
-    const isUpdateAllowed = Object.keys(Userdata).every((k) =>
-      allowedUpdates.includes(k)
-    );
-    if (!isUpdateAllowed) {
-      throw new Error("Updates not allowed");
-    } else {
-      const user = await User.findByIdAndUpdate(userId, Userdata, {
-        runValidators: true,
-      });
-      res.send("User Updated successfully");
-    }
-  } catch (error) {
-    res.status(400).send("Something went wrong, " + error.message);
-  }
-});
-
-// // delete --> deleting a user using UserId
-app.delete("/delete", async (req, res) => {
-  const userId = req.body.userId;
-  try {
-    const user = await User.findByIdAndDelete(userId);
-    res.send("User deleted successfully");
-  } catch (error) {
-    res.status(500).send("Something went wrong");
+    res.status(400).send("ERROR : " + error.message);
   }
 });
 
 app.use("/", (req, res) => {
   res.send("Go Back");
 });
-
 
 // DB Connection
 connectDB()
