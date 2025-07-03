@@ -23,12 +23,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       required: true,
       unique: true,
-      trim: true,
-      validate(value) {
-        if (!validator.isEmail(value)) {
-          throw new Error("Email not valid");
-        }
-      },
+      trim: true
     },
     password: {
       type: String,
@@ -42,11 +37,10 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       lowercase: true,
-      validate(value) {
-        if (!["male", "female", "other"].includes(value)) {
-          throw new Error("Gender data is not valid");
-        }
-      },
+      enum : {
+        values : ["male", "female", "other"],
+        message : `{VALUE} is not a valid gender type`
+      }
     },
     skills: {
       type: [String],
