@@ -6,22 +6,22 @@ const validator = require("validator");
 
 const authRouter = express.Router();
 
+const USER_SAFE_DATA = [
+  "firstName",
+  "lastName",
+  "photoUrl",
+  "age",
+  "about",
+  "gender",
+  "skills",
+];
+
 authRouter.post("/signup", async (req, res) => {
   try {
     // validation of data
     validateSignUpData(req);
 
-    const {
-      firstName,
-      lastName,
-      emailId,
-      password,
-      age,
-      gender,
-      skills,
-      about,
-      photoUrl,
-    } = req.body;
+    const { firstName, lastName, emailId, password } = req.body;
 
     //encrypt the password
     const hashPassword = await bcrypt.hash(password, 10);
@@ -32,18 +32,23 @@ authRouter.post("/signup", async (req, res) => {
       lastName,
       emailId,
       password: hashPassword,
-      age,
-      gender,
-      skills,
-      about,
-      photoUrl,
     });
 
-    await user.save();
-    res.send("User added successfully");
+    const savedUser = await user.save();
+    const token = await savedUser.getJWT();
+    res.cookie("token", token, {
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+    res.json({ message: "User added successfully", data: savedUser });
   } catch (error) {
     // Handle unique email errors
-    res.status(400).send("ERROR : " + error.message);
+    if (error.code === 11000 && error.keyPattern?.emailId) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    return res
+      .status(400)
+      .json({ message: error.message || "Something went wrong" });
   }
 });
 
@@ -55,7 +60,7 @@ authRouter.post("/login", async (req, res) => {
     if (!validator.isEmail(emailId)) {
       throw new Error("Enter valid Email id");
     } else if (!validator.isStrongPassword(password)) {
-      throw new Error("Enter strong password");
+      throw new Error("Password must be at least 8 characters long, start with an uppercase letter, and include a lowercase letter, number, and special character");
     }
 
     // check user present or not
@@ -73,7 +78,7 @@ authRouter.post("/login", async (req, res) => {
       res.cookie("token", token, {
         expires: new Date(Date.now() + 8 * 3600000),
       });
-      res.send("Login Successfully");
+      res.send(user);
     } else {
       throw new Error("Invalid Credentials");
     }

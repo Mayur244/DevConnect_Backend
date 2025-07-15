@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     },
     lastName: {
       type: String,
+      required : true,
       minLength: 2,
       maxLength: 30,
       trim: true,
@@ -47,12 +48,14 @@ const userSchema = new mongoose.Schema(
       validate: [
     {
       validator: function (arr) {
+        if (!arr || arr.length === 0) return true;
         return arr.length >= 2 && arr.length <= 10;
       },
       message: "Skills must be between 2 and 10 items.",
     },
     {
       validator: function (arr) {
+        if (!arr || arr.length === 0) return true;
         return arr.every(skill => typeof skill === "string" && skill.trim().length > 0);
       },
       message: "Each skill must be a non-empty string.",
@@ -61,12 +64,12 @@ const userSchema = new mongoose.Schema(
     },
     about: {
       type: String,
-      default: "This is default info for the user",
+      default: "Just getting started. Exploring the world one post at a time. Say hi and let’s connect!",
       maxLength: 200,
     },
     photoUrl: {
       type: String,
-      default: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      default: "https://img.freepik.com/free-photo/headshot-serious-bearded-man-with-mustache-beard-wears-round-spectacles_273609-8955.jpg?semt=ais_hybrid&w=740",
       trim: true,
       validate(value){
         if(!validator.isURL(value)) {
@@ -82,7 +85,7 @@ const userSchema = new mongoose.Schema(
 
 userSchema.methods.getJWT = async function () {
   const user = this;
-  const token = await jwt.sign({ _id: user._id }, "Safe@44", {
+  const token = await jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
   return token;
@@ -97,6 +100,19 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
   );
   return isPasswordValid;
 };
+
+userSchema.pre('save', function (next) {
+  if (this.firstName) {
+    this.firstName = this.firstName.charAt(0).toUpperCase() + this.firstName.slice(1).toLowerCase();
+  }
+
+  if (this.lastName) {
+    this.lastName = this.lastName.charAt(0).toUpperCase() + this.lastName.slice(1).toLowerCase();
+  }
+
+  next();
+});
+
 
 module.exports = mongoose.model("User", userSchema);
 
