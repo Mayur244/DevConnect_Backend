@@ -4,6 +4,8 @@ const app = express();
 const { connectDB } = require("./config/database");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const http = require("http");
+const { initializeSocket } = require("./utils/socket");
 
 app.use(
   cors({
@@ -24,10 +26,13 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 
+const server = http.createServer(app);
+initializeSocket(server);
+
 connectDB()
   .then(() => {
     console.log("DB connection established");
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log("server is listening at PORT 3000...");
     });
   })
