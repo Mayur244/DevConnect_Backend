@@ -1,10 +1,13 @@
 const socket = require("socket.io");
-const crypto = require("crypto")
-
+const crypto = require("crypto");
+const Message = require("../models/message");
 
 const getSecretRoomId = (userId, targetUserId) => {
-    return crypto.createHash("sha256").update([userId, targetUserId].sort().join("$")).digest("hex");
-}
+  return crypto
+    .createHash("sha256")
+    .update([userId, targetUserId].sort().join("$"))
+    .digest("hex");
+};
 
 const initializeSocket = (server) => {
   const io = socket(server, {
@@ -14,18 +17,29 @@ const initializeSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    socket.on("joinChat", ({firstName, userId, targetUserId}) => {
+    socket.on("joinChat", ({ firstName, userId, targetUserId }) => {
+      const roomId = getSecretRoomId(userId, targetUserId);
+      socket.join(roomId);
+    });
+
+    socket.on(
+      "sendMessage",
+      async ({ firstName, userId, targetUserId, textMessage }) => {
         const roomId = getSecretRoomId(userId, targetUserId);
-        socket.join(roomId)
 
-        // console.log(firstName + " join " + roomId);
-    })
+        const newMsg = new Message({
+            roomId : roomId,
+            from: userId,
+            to: targetUserId,
+            firstName : firstName,
+            message : textMessage,
+        });
+        await newMsg.save();
+        
+        io.to(roomId).emit("messageReceived", newMsg );
+      }
+    );
+  });
+};
 
-    socket.on("sendMessage", ({firstName, userId, targetUserId, textMessage}) => {
-        const roomId = getSecretRoomId(userId, targetUserId);
-        io.to(roomId).emit("messageReceived", {firstName, textMessage})
-    })
-  })
-}; 
-
-module.exports = {initializeSocket};
+module.exports = { initializeSocket };
