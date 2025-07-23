@@ -9,7 +9,7 @@ const { initializeSocket } = require("./utils/socket");
 
 app.use(
   cors({
-    origin: true,
+    origin: "https://pair-up-frontend-six.vercel.app",
     credentials: true,
   })
 );
