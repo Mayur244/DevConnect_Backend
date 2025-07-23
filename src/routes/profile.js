@@ -1,5 +1,5 @@
 const express = require("express");
-const { userAuth } = require("../middleware/Auth");
+const { userAuth } = require("../middleware/auth");
 const { validateEditProfileData } = require("../utils/validation");
 const validator = require("validator");
 const bcrypt = require("bcrypt");

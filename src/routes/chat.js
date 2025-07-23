@@ -1,4 +1,4 @@
-const { userAuth } = require("../middleware/Auth"); 
+const { userAuth } = require("../middleware/auth"); 
 const express = require("express");
 const chatRouter = express.Router();
 const Message = require("../models/message");
