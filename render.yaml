@@ -9,8 +9,8 @@ services:
       - key: PORT
         value: 3000
       - key: DB_CONNECTION
-        value: ${DB_CONNECTION}
+        value: dumy
       - key: JWT_SECRET
-        value: ${JWT_SECRET}
+        value: dummy
 
 
