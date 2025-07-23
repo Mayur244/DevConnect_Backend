@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: my-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DB_CONNECTION
+        value: ${DB_CONNECTION}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+
+
